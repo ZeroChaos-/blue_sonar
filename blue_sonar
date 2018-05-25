@@ -1,0 +1,45 @@
+#!/bin/sh
+
+if [ x"$(command -v id 2> /dev/null)" != "x" ]
+then
+  USERID="$(id -u 2> /dev/null)"
+fi
+
+if [ "x${USERID}" = "x" -a "x${UID}" != "x" ]
+then
+  USERID=${UID}
+fi
+
+if [ x${USERID} != "x" -a x${USERID} != "x0" ]
+then
+  printf "Run it as root\n" ; exit 1;
+fi
+
+if [ "${1}" = "" ]; then
+  printf "Usage: ${0} <mac address>\n"
+  exit 1
+fi
+
+control_c() {
+  kill ${l2pid} 2> /dev/null
+  exit 0
+}
+
+trap control_c INT
+trap control_c TERM
+
+radio="hci0"
+
+while true; do
+  if [ -n "${l2pid}" ] && ps -p "${l2pid}" > /dev/null 2>&1; then
+    true
+  else
+    l2ping -i "${radio}" -t 1 "$1" 2> /dev/null &
+    l2pid=$!
+    sleep 1
+  fi
+  if ! hcitool -i "${radio}" rssi "$1" 2> /dev/null; then
+    printf "Out of range or not connected\n"
+  fi
+  sleep 1
+done
