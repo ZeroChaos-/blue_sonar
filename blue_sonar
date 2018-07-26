@@ -28,6 +28,8 @@ control_c() {
 trap control_c INT
 trap control_c TERM
 
+rc-service bluetooth status || rc-service bluetooth start
+
 radio="hci0"
 
 while true; do
