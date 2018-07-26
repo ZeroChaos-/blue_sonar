@@ -99,7 +99,7 @@ while true; do
   shift
 done
 if [ -z "${target}" ]; then
-  printf "target must be specified, please use -t or --target to specify one"
+  printf "target must be specified, please use -t or --target to specify one\n"
   usage
   exit 1
 fi
