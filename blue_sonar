@@ -1,47 +1,131 @@
-#!/bin/sh
+#!/bin/bash
 
 if [ x"$(command -v id 2> /dev/null)" != "x" ]
 then
   USERID="$(id -u 2> /dev/null)"
 fi
 
-if [ "x${USERID}" = "x" -a "x${UID}" != "x" ]
+if [ "x${USERID}" = "x" ] && [ "x${UID}" != "x" ]
 then
   USERID=${UID}
 fi
 
-if [ x${USERID} != "x" -a x${USERID} != "x0" ]
+if [ x${USERID} != "x" ] && [ x${USERID} != "x0" ]
 then
-  printf "Run it as root\n" ; exit 1;
-fi
-
-if [ "${1}" = "" ]; then
-  printf "Usage: ${0} <mac address>\n"
+  printf "Run it as root\n"
   exit 1
 fi
+
+usage() {
+  printf "\nUsage: ${0} --target <mac address> [--sleep 1]\n"
+  printf "\t-h,\t--help,     \tShow this help menu\n"
+  printf "\t-t,\t--target,   \tRequired: specify target mac address, ex: 00:11:22:33:44:55\n"
+  printf "\t-i,\t--interface,\tSpecify which bluetooth device to use, defaults to hci0\n"
+  printf "\t-s,\t--sleep,    \tSpecify how long to sleep between pings, defaults to 1\n"
+  printf "\t-q,\t--quiet,    \tQuiet l2ping output, strongly recommended for <1 values of sleep\n"
+  printf "\n"
+}
 
 control_c() {
   kill ${l2pid} 2> /dev/null
   exit 0
 }
 
+readonly ISNUMBER='^[0-9.]+$'
+readonly ISMAC='^([a-fA-F0-9]{2}:){5}[a-fA-F0-9]{2}$'
+radio="hci0"
+target=""
+sleep="1"
+quiet="1"
+
+#parse args
+while true; do
+  case $1 in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    -i|--interface)
+      if [ -n "${2}" ]; then
+        if hciconfig "${2}" > /dev/zero 2>&1; then
+          radio="${2}"
+          shift
+        else
+          printf "Error: unable to find interface ${2}\n"
+        fi
+      else
+        printf "Error: ${1} requires a non-empty option argument\n"
+        usage
+        exit 1
+      fi
+      ;;
+    -q|--quiet)
+      quiet="0"
+      ;;
+    -s|--sleep)
+      if [ -n "${2}" ]; then
+        if [[ ${2} =~ ${ISNUMBER} ]]; then
+          sleep="${2}"
+          shift
+        else
+          printf "Error: sleep argument expects a number, not ${2}\n"
+          usage
+          exit 1
+        fi
+      fi
+      ;;
+    -t|--target)
+      if [ -n "${2}" ]; then
+        if [[ ${2} =~ ${ISMAC} ]]; then
+          target="${2}"
+          shift
+        else
+          printf "Error: target argument expects a valid mac address, not ${2}\n"
+          usage
+          exit 1
+        fi
+      else
+        printf "Error: ${1} requires a non-empty option argument\n"
+      fi
+      ;;
+    --)
+      shift
+      break
+      ;;
+    *)
+      break
+      ;;
+  esac
+  shift
+done
+if [ -z "${target}" ]; then
+  printf "target must be specified, please use -t or --target to specify one"
+  usage
+  exit 1
+fi
+
+
 trap control_c INT
 trap control_c TERM
 
-rc-service bluetooth status || rc-service bluetooth start
-
-radio="hci0"
+rc-service bluetooth status > /dev/null 2>&1 || rc-service bluetooth start > /dev/null 2>&1
 
 while true; do
   if [ -n "${l2pid}" ] && ps -p "${l2pid}" > /dev/null 2>&1; then
     true
   else
-    l2ping -i "${radio}" -t 1 "$1" 2> /dev/null &
-    l2pid=$!
+    if [ "$quiet}" = "0" ]; then
+      l2ping -i "${radio}" -t 1 -d "${sleep}" "${target}" 2> /dev/null &
+      l2pid=$!
+    else
+      l2ping -i "${radio}" -t 1 -d "${sleep}" "${target}" >/dev/null 2> /dev/null &
+      l2pid=$!
+    fi
+
     sleep 1
   fi
-  if ! hcitool -i "${radio}" rssi "$1" 2> /dev/null; then
+  if ! hcitool -i "${radio}" rssi "${target}" 2> /dev/null; then
     printf "Out of range or not connected\n"
   fi
-  sleep 1
+  sleep "${sleep}"
 done
