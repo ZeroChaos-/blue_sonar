@@ -31,6 +31,9 @@ control_c() {
   exit 0
 }
 
+readonly PROGRESS='################################################################################'
+readonly red=$'\e[0;31m'
+readonly end=$'\e[0m'
 readonly ISNUMBER='^[0-9.]+$'
 readonly ISMAC='^([a-fA-F0-9]{2}:){5}[a-fA-F0-9]{2}$'
 radio="hci0"
@@ -124,8 +127,29 @@ while true; do
 
     sleep 1
   fi
-  if ! hcitool -i "${radio}" rssi "${target}" 2> /dev/null; then
+  if ! rssi="$(hcitool -i "${radio}" rssi "${target}" 2> /dev/null | awk '{print $4}')"; then
     printf "Out of range or not connected\n"
+  elif [ -z "${rssi}" ]; then
+    printf "Out of range or not connected\n"
+  else
+    #max seen rssi was 20, expected numbers are negative
+    #color progress bar red for areas not seen
+    bars=$((rssi + 50))
+    if [ ${bars} -lt 0 ] || [ ${bars} = 0 ]; then
+      printf -- "${rssi} ${PROGRESS:0:1}\n"
+    elif [ ${bars} -gt 80 ]; then
+      printf -- "${rssi} ${PROGRESS}\n"
+    else
+      if [ ${rssi} -ge 10 ]; then
+        printf -- " ${rssi} ${PROGRESS:0:${bars}} ${red}${PROGRESS:${bars}}${end}\n"
+      elif [ ${rssi} -lt 10 ] && [ ${rssi} -gt -1 ]; then
+        printf -- "  ${rssi} ${PROGRESS:0:${bars}} ${red}${PROGRESS:${bars}}${end}\n"
+      elif [ ${rssi} -lt 1 ] && [ ${rssi} -gt -10 ]; then
+        printf -- " ${rssi} ${PROGRESS:0:${bars}} ${red}${PROGRESS:${bars}}${end}\n"
+      else
+        printf -- "${rssi} ${PROGRESS:0:${bars}} ${red}${PROGRESS:${bars}}${end}\n"
+      fi
+    fi
   fi
   sleep "${sleep}"
 done
