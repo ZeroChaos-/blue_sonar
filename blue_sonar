@@ -26,11 +26,6 @@ usage() {
   printf "\n"
 }
 
-control_c() {
-  kill ${l2pid} 2> /dev/null
-  exit 0
-}
-
 readonly PROGRESS='################################################################################'
 readonly red=$'\e[0;31m'
 readonly end=$'\e[0m'
@@ -40,6 +35,21 @@ radio="hci0"
 target=""
 sleep="1"
 quiet="1"
+minrssi=-128
+maxrssi=128
+
+control_c() {
+  kill ${l2pid} 2> /dev/null
+  printf "\n"
+  if [ ${minrssi} != -128 ]; then
+    printf "MIN: ${minrssi}\n"
+  fi
+  if [ ${maxrssi} != 128 ]; then
+    printf "MAX: ${maxrssi}\n"
+  fi
+  printf "Thanks for tracking with blue_sonar.\n"
+  exit 0
+}
 
 #parse args
 while true; do
@@ -129,12 +139,16 @@ while true; do
   fi
   if ! rssi="$(hcitool -i "${radio}" rssi "${target}" 2> /dev/null | awk '{print $4}')"; then
     printf "Out of range or not connected\n"
+    sleep ${sleep}
+    continue
   elif [ -z "${rssi}" ]; then
     printf "Out of range or not connected\n"
+    sleep ${sleep}
+    continue
   else
     #max seen rssi was 20, expected numbers are negative
     #color progress bar red for areas not seen
-    bars=$((rssi + 50))
+    bars=$((rssi + 70))
     if [ ${bars} -lt 0 ] || [ ${bars} = 0 ]; then
       printf -- "RSSI: ${rssi}  ${PROGRESS:0:1}${red}${PROGRESS:${bars}}${end}\n"
     elif [ ${bars} -gt 80 ]; then
@@ -150,6 +164,11 @@ while true; do
         printf -- "RSSI: ${rssi}  ${PROGRESS:0:${bars}}${red}${PROGRESS:${bars}}${end}\n"
       fi
     fi
+  fi
+  if [ ${rssi} -lt ${minrssi} ]; then
+    minrssi="${rssi}"
+  elif [ ${rssi} -gt ${maxrssi} ]; then
+    maxrssi="${rssi}"
   fi
   sleep "${sleep}"
 done
