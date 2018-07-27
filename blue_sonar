@@ -35,17 +35,17 @@ radio="hci0"
 target=""
 sleep="1"
 quiet="1"
-minrssi=-128
-maxrssi=128
+minrssi=128
+maxrssi=-128
 
 control_c() {
   kill ${l2pid} 2> /dev/null
   printf "\n"
-  if [ ${minrssi} != -128 ]; then
-    printf "MIN: ${minrssi}\n"
+  if [ "${minrssi}" != "-128" ]; then
+    printf "MIN RSSI: ${minrssi}\n"
   fi
-  if [ ${maxrssi} != 128 ]; then
-    printf "MAX: ${maxrssi}\n"
+  if [ "${maxrssi}" != "128" ]; then
+    printf "MAX RSSI: ${maxrssi}\n"
   fi
   printf "Thanks for tracking with blue_sonar.\n"
   exit 0
@@ -167,7 +167,8 @@ while true; do
   fi
   if [ ${rssi} -lt ${minrssi} ]; then
     minrssi="${rssi}"
-  elif [ ${rssi} -gt ${maxrssi} ]; then
+  fi
+  if [ ${rssi} -gt ${maxrssi} ]; then
     maxrssi="${rssi}"
   fi
   sleep "${sleep}"
