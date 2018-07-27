@@ -114,7 +114,7 @@ while true; do
   if [ -n "${l2pid}" ] && ps -p "${l2pid}" > /dev/null 2>&1; then
     true
   else
-    if [ "$quiet}" = "0" ]; then
+    if [ "${quiet}" = "1" ]; then
       l2ping -i "${radio}" -t 1 -d "${sleep}" "${target}" 2> /dev/null &
       l2pid=$!
     else
