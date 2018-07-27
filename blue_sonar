@@ -136,18 +136,18 @@ while true; do
     #color progress bar red for areas not seen
     bars=$((rssi + 50))
     if [ ${bars} -lt 0 ] || [ ${bars} = 0 ]; then
-      printf -- "${rssi} ${PROGRESS:0:1}\n"
+      printf -- "RSSI: ${rssi}  ${PROGRESS:0:1}${red}${PROGRESS:${bars}}${end}\n"
     elif [ ${bars} -gt 80 ]; then
-      printf -- "${rssi} ${PROGRESS}\n"
+      printf -- "RSSI: ${rssi}  ${PROGRESS}${red}${PROGRESS:${bars}}${end}\n"
     else
       if [ ${rssi} -ge 10 ]; then
-        printf -- " ${rssi} ${PROGRESS:0:${bars}} ${red}${PROGRESS:${bars}}${end}\n"
+        printf -- "RSSI:  ${rssi}  ${PROGRESS:0:${bars}}${red}${PROGRESS:${bars}}${end}\n"
       elif [ ${rssi} -lt 10 ] && [ ${rssi} -gt -1 ]; then
-        printf -- "  ${rssi} ${PROGRESS:0:${bars}} ${red}${PROGRESS:${bars}}${end}\n"
+        printf -- "RSSI:   ${rssi}  ${PROGRESS:0:${bars}}${red}${PROGRESS:${bars}}${end}\n"
       elif [ ${rssi} -lt 1 ] && [ ${rssi} -gt -10 ]; then
-        printf -- " ${rssi} ${PROGRESS:0:${bars}} ${red}${PROGRESS:${bars}}${end}\n"
+        printf -- "RSSI:  ${rssi}  ${PROGRESS:0:${bars}}${red}${PROGRESS:${bars}}${end}\n"
       else
-        printf -- "${rssi} ${PROGRESS:0:${bars}} ${red}${PROGRESS:${bars}}${end}\n"
+        printf -- "RSSI: ${rssi}  ${PROGRESS:0:${bars}}${red}${PROGRESS:${bars}}${end}\n"
       fi
     fi
   fi
