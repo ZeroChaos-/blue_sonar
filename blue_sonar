@@ -22,7 +22,7 @@ usage() {
   printf "\t-t,\t--target,   \tRequired: specify target mac address, ex: 00:11:22:33:44:55\n"
   printf "\t-i,\t--interface,\tSpecify which bluetooth device to use, defaults to hci0\n"
   printf "\t-s,\t--sleep,    \tSpecify how long to sleep between pings, defaults to 1\n"
-  printf "\t-q,\t--quiet,    \tQuiet l2ping output, strongly recommended for <1 values of sleep\n"
+  printf "\t-v,\t--verbose,  \tShow l2ping output, mostly for debugging\n"
   printf "\n"
 }
 
@@ -34,7 +34,7 @@ readonly ISMAC='^([a-fA-F0-9]{2}:){5}[a-fA-F0-9]{2}$'
 radio="hci0"
 target=""
 sleep="1"
-quiet="1"
+quiet="0"
 minrssi=128
 maxrssi=-128
 
@@ -72,8 +72,8 @@ while true; do
         exit 1
       fi
       ;;
-    -q|--quiet)
-      quiet="0"
+    -v|--verbose)
+      quiet="1"
       ;;
     -s|--sleep)
       if [ -n "${2}" ]; then
