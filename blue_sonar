@@ -26,7 +26,7 @@ usage() {
   printf "\n"
 }
 
-readonly PROGRESS='################################################################################'
+readonly PROGRESS='#####################################################################'
 readonly red=$'\e[0;31m'
 readonly end=$'\e[0m'
 readonly ISNUMBER='^[0-9.]+$'
@@ -37,6 +37,7 @@ sleep="1"
 quiet="0"
 minrssi=128
 maxrssi=-128
+sim="0"
 
 control_c() {
   kill ${l2pid} 2> /dev/null
@@ -101,6 +102,10 @@ while true; do
         printf "Error: ${1} requires a non-empty option argument\n"
       fi
       ;;
+    --sim)
+      sim="1"
+      rssi="-70"
+      ;;
     --)
       shift
       break
@@ -111,7 +116,7 @@ while true; do
   esac
   shift
 done
-if [ -z "${target}" ]; then
+if [ -z "${target}" ] && [ "${sim}" != "1" ]; then
   printf "target must be specified, please use -t or --target to specify one\n"
   usage
   exit 1
@@ -124,7 +129,9 @@ trap control_c TERM
 rc-service bluetooth status > /dev/null 2>&1 || rc-service bluetooth start > /dev/null 2>&1
 
 while true; do
-  if [ -n "${l2pid}" ] && ps -p "${l2pid}" > /dev/null 2>&1; then
+  if [ "${sim}" = "1" ]; then
+    true
+  elif [ -n "${l2pid}" ] && ps -p "${l2pid}" > /dev/null 2>&1; then
     true
   else
     if [ "${quiet}" = "1" ]; then
@@ -137,7 +144,7 @@ while true; do
 
     sleep 1
   fi
-  if ! rssi="$(hcitool -i "${radio}" rssi "${target}" 2> /dev/null | awk '{print $4}')"; then
+  if [ "${sim}" = "0" ] && ! rssi="$(hcitool -i "${radio}" rssi "${target}" 2> /dev/null | awk '{print $4}')"; then
     printf "Out of range or not connected\n"
     sleep ${sleep}
     continue
@@ -146,13 +153,23 @@ while true; do
     sleep ${sleep}
     continue
   else
+    if [ "${sim}" = "1" ]; then
+      rssi=$((rssi + 1))
+      if [ "${rssi}" = "21" ]; then
+        control_c
+      fi
+    fi
     #max seen rssi was 20, expected numbers are negative
     #color progress bar red for areas not seen
-    bars=$((rssi + 70))
+    bars=$((rssi + 65))
     if [ ${bars} -lt 0 ] || [ ${bars} = 0 ]; then
-      printf -- "RSSI: ${rssi}  ${PROGRESS:0:1}${red}${PROGRESS:${bars}}${end}\n"
-    elif [ ${bars} -gt 80 ]; then
-      printf -- "RSSI: ${rssi}  ${PROGRESS}${red}${PROGRESS:${bars}}${end}\n"
+      printf -- "RSSI: ${rssi}  ${PROGRESS:0:1}${red}${PROGRESS:1}${end}\n"
+    elif [ ${bars} -gt 69 ]; then
+      if [ "${rssi}" -lt 10 ] && [ ${rssi} -gt -1 ]; then
+        printf -- "RSSI:   ${rssi}  ${PROGRESS}\n"
+      else
+        printf -- "RSSI:  ${rssi}  ${PROGRESS}\n"
+      fi
     else
       if [ ${rssi} -ge 10 ]; then
         printf -- "RSSI:  ${rssi}  ${PROGRESS:0:${bars}}${red}${PROGRESS:${bars}}${end}\n"
