@@ -126,7 +126,11 @@ fi
 trap control_c INT
 trap control_c TERM
 
-rc-service bluetooth status > /dev/null 2>&1 || rc-service bluetooth start > /dev/null 2>&1
+if [ -x "$(command -v rc-service 2>&1)" ]; then
+  rc-service bluetooth status > /dev/null 2>&1 || rc-service bluetooth start > /dev/null 2>&1
+elif [ -x "$(command -v service)" ]; then
+  service bluetooth status > /dev/null 2>&1 || service bluetooth start > /dev/null 2>&1
+fi
 
 while true; do
   if [ "${sim}" = "1" ]; then
