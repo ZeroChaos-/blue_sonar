@@ -202,10 +202,10 @@ rfkill_check ${radio}
 rfkill_retcode="$?"
 case ${rfkill_retcode} in
   1) printf "\t${radio} is soft blocked, please run \"rfkill unblock ${index}\" to use this interface.\n" ;;
-  2) printf "\t${radio} is hard blocked, please flip the hardware wifi switch (or in BIOS) to on.\n"
+  2) printf "\t${radio} is hard blocked, please flip the hardware bluetooth switch (or in BIOS) to on.\n"
     printf "\tIt may also be possible to unblock with \"rfkill unblock ${index}\"\n"
     ;;
-  3) printf "\t${radio} is hard and soft blocked, please flip the hardware wifi switch to on.\n"
+  3) printf "\t${radio} is hard and soft blocked, please flip the hardware bluetooth switch to on or plug in the dongle.\n"
     printf "\tIt may also be needed to unblock with \"rfkill unblock ${index}\"\n"
     ;;
 esac
@@ -215,7 +215,8 @@ if [ "${rfkill_retcode}" != 0 ]; then
   yesorno
   retcode="$?"
   if [ "${retcode}" = "1" ]; then
-    return 1
+    printf "\tAutomatic unblocking with rfkill will not be used.\nMake sure that a valid bluetooth interface was selected.\nExiting.\n"
+    exit 1
   elif [ "${retcode}" = "0" ]; then
     rfkill_unblock ${radio}
   fi
