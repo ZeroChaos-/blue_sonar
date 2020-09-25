@@ -217,7 +217,7 @@ if [ "${rfkill_retcode}" != 0 ]; then
   if [ "${retcode}" = "1" ]; then
     return 1
   elif [ "${retcode}" = "0" ]; then
-    rfkill_unblock ${PHYDEV}
+    rfkill_unblock ${radio}
   fi
 fi
 
