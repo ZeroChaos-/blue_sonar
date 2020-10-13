@@ -212,6 +212,18 @@ fi
 trap control_c INT
 trap control_c TERM
 
+if [ -c /dev/rfkill ]; then
+	if [ ! -x "$(command -v rfkill 2>&1)" ];then
+		printf "Your kernel supports rfkill but you don't have rfkill installed.\n"
+		printf "To ensure devices are unblocked you must install rfkill.\n"
+		RFKILL=0
+	else
+		RFKILL=1
+	fi
+else
+	RFKILL=0
+fi
+
 rfkill_check ${radio}
 rfkill_retcode="$?"
 case ${rfkill_retcode} in
@@ -240,18 +252,6 @@ if [ -x "$(command -v rc-service 2>&1)" ]; then
   rc-service bluetooth status > /dev/null 2>&1 || rc-service bluetooth start > /dev/null 2>&1
 elif [ -x "$(command -v service)" ]; then
   service bluetooth status > /dev/null 2>&1 || service bluetooth start > /dev/null 2>&1
-fi
-
-if [ -c /dev/rfkill ]; then
-	if [ ! -x "$(command -v rfkill 2>&1)" ];then
-		printf "Your kernel supports rfkill but you don't have rfkill installed.\n"
-		printf "To ensure devices are unblocked you must install rfkill.\n"
-		RFKILL=0
-	else
-		RFKILL=1
-	fi
-else
-	RFKILL=0
 fi
 
 while true; do
