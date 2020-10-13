@@ -195,37 +195,22 @@ if [ -z "${target}" ] && [ "${sim}" != "1" ]; then
   exit 1
 fi
 
-trap control_c INT
-trap control_c TERM
-
-rfkill_check ${radio}
-rfkill_retcode="$?"
-case ${rfkill_retcode} in
-  1) printf "\t${radio} is soft blocked, please run \"rfkill unblock ${index}\" to use this interface.\n" ;;
-  2) printf "\t${radio} is hard blocked, please flip the hardware wifi switch (or in BIOS) to on.\n"
-    printf "\tIt may also be possible to unblock with \"rfkill unblock ${index}\"\n"
-    ;;
-  3) printf "\t${radio} is hard and soft blocked, please flip the hardware wifi switch to on.\n"
-    printf "\tIt may also be needed to unblock with \"rfkill unblock ${index}\"\n"
-    ;;
-esac
-if [ "${rfkill_retcode}" != 0 ]; then
-  printf "rfkill error, unable to start ${radio}\n\n"
-  printf "Would you like to try and automatically resolve this? [y/n] "
-  yesorno
-  retcode="$?"
-  if [ "${retcode}" = "1" ]; then
-    return 1
-  elif [ "${retcode}" = "0" ]; then
-    rfkill_unblock ${PHYDEV}
+# deconflict with blue hydra also running
+blue_hydra_pid_check=$(ps -ef | grep -v grep | grep -i 'bluehydra')
+blue_hydra_config_file="/etc/blue_hydra/blue_hydra.yml"
+if [ -f /etc/blue_hydra/blue_hydra.yml ]; then
+  # get interface that blue hydra is using
+  blue_hydra_interface=$(grep 'bt_device' $blue_hydra_config_file | awk -F: '{print $2}' | sed 's/^ //g')
+  if [[ "${radio}" = "${blue_hydra_interface}" ]] && [[ -n $blue_hydra_pid_check ]]; then
+    echo "Blue Hydra is already running on the specified bluetooth interface."
+    echo "Select a different interface with -i or --interface and run this script again."
+    usage
+    exit 1
   fi
 fi
 
-if [ -x "$(command -v rc-service 2>&1)" ]; then
-  rc-service bluetooth status > /dev/null 2>&1 || rc-service bluetooth start > /dev/null 2>&1
-elif [ -x "$(command -v service)" ]; then
-  service bluetooth status > /dev/null 2>&1 || service bluetooth start > /dev/null 2>&1
-fi
+trap control_c INT
+trap control_c TERM
 
 if [ -c /dev/rfkill ]; then
 	if [ ! -x "$(command -v rfkill 2>&1)" ];then
@@ -237,6 +222,36 @@ if [ -c /dev/rfkill ]; then
 	fi
 else
 	RFKILL=0
+fi
+
+rfkill_check ${radio}
+rfkill_retcode="$?"
+case ${rfkill_retcode} in
+  1) printf "\t${radio} is soft blocked, please run \"rfkill unblock ${index}\" to use this interface.\n" ;;
+  2) printf "\t${radio} is hard blocked, please flip the hardware bluetooth switch (or in BIOS) to on.\n"
+    printf "\tIt may also be possible to unblock with \"rfkill unblock ${index}\"\n"
+    ;;
+  3) printf "\t${radio} is hard and soft blocked, please flip the hardware bluetooth switch to on or plug in the dongle.\n"
+    printf "\tIt may also be needed to unblock with \"rfkill unblock ${index}\"\n"
+    ;;
+esac
+if [ "${rfkill_retcode}" != 0 ]; then
+  printf "rfkill error, unable to start ${radio}\n\n"
+  printf "Would you like to try and automatically resolve this? [y/n] "
+  yesorno
+  retcode="$?"
+  if [ "${retcode}" = "1" ]; then
+    printf "\tAutomatic unblocking with rfkill will not be used.\nMake sure that a valid bluetooth interface was selected.\nExiting.\n"
+    exit 1
+  elif [ "${retcode}" = "0" ]; then
+    rfkill_unblock ${radio}
+  fi
+fi
+
+if [ -x "$(command -v rc-service 2>&1)" ]; then
+  rc-service bluetooth status > /dev/null 2>&1 || rc-service bluetooth start > /dev/null 2>&1
+elif [ -x "$(command -v service)" ]; then
+  service bluetooth status > /dev/null 2>&1 || service bluetooth start > /dev/null 2>&1
 fi
 
 while true; do
